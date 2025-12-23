@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Sawah Elementor Blocks
  * Description: Custom Elementor blocks for Smart Mag Theme.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Mohamed Sawah
  * Text Domain: sawah-blocks
  */
@@ -57,13 +57,13 @@ final class Sawah_Elementor_Blocks {
      * Include and Register Widgets
      */
     public function register_widgets( $widgets_manager ) {
-        // Include the widget file
+        // 1. Slider Block
         require_once( __DIR__ . '/widget-slider.php' );
-
-        // Register the widget class
         $widgets_manager->register( new \Elementor_Sawah_Slider() );
         
-        // FUTURE BLOCKS: Add new require_once and register lines here
+        // 2. Mobile Feature Block (NEW)
+        require_once( __DIR__ . '/widget-mobile-feature.php' );
+        $widgets_manager->register( new \Elementor_Sawah_Mobile_Feature() );
     }
 
     /**
