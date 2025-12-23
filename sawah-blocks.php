@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Sawah Elementor Blocks
  * Description: Custom Elementor blocks for Smart Mag Theme.
- * Version: 1.0.3
+ * Version: 1.0.4
  * Author: Mohamed Sawah
  * Text Domain: sawah-blocks
  */

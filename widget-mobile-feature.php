@@ -59,9 +59,12 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
             'selectors' => [ '{{WRAPPER}} .smf-content' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};' ],
         ]);
 
-        $this->add_control('color_cat', [ 'label' => 'Category Color', 'type' => \Elementor\Controls_Manager::COLOR, 'default' => '#d60000', 'selectors' => [ '{{WRAPPER}} .post-cat a' => 'color: {{VALUE}}' ] ]);
+        // UPDATED DEFAULT COLOR HERE
+        $this->add_control('color_cat', [ 'label' => 'Category Color', 'type' => \Elementor\Controls_Manager::COLOR, 'default' => '#626e7a', 'selectors' => [ '{{WRAPPER}} .post-cat a' => 'color: {{VALUE}}' ] ]);
+        
         $this->add_control('color_title', [ 'label' => 'Title Color', 'type' => \Elementor\Controls_Manager::COLOR, 'default' => '#111111', 'selectors' => [ '{{WRAPPER}} .post-title a' => 'color: {{VALUE}}' ] ]);
-        $this->add_control('color_meta', [ 'label' => 'Meta/Icon Color', 'type' => \Elementor\Controls_Manager::COLOR, 'default' => '#999999', 'selectors' => [ '{{WRAPPER}} .post-meta-items, {{WRAPPER}} .post-meta-items i' => 'color: {{VALUE}}' ] ]);
+        
+        $this->add_control('color_meta', [ 'label' => 'Views/Meta Color', 'type' => \Elementor\Controls_Manager::COLOR, 'default' => '#999999', 'selectors' => [ '{{WRAPPER}} .post-views, {{WRAPPER}} .post-views i' => 'color: {{VALUE}}' ] ]);
 
         $this->add_group_control( \Elementor\Group_Control_Typography::get_type(), [ 'name' => 'title_typography', 'label' => 'Title Typography', 'selector' => '{{WRAPPER}} .post-title' ]);
         $this->add_group_control( \Elementor\Group_Control_Typography::get_type(), [ 'name' => 'cat_typography', 'label' => 'Category Typography', 'selector' => '{{WRAPPER}} .post-cat' ]);
@@ -126,12 +129,10 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
         $com_count = get_comments_number($pid);
         $views = function_exists('pvc_get_post_views') ? pvc_get_post_views($pid) : (int)get_post_meta($pid, $settings['views_meta_key'], true);
         
-        // Formatted Views (e.g., 4.4k)
         if ($views > 1000) {
             $views = round($views / 1000, 1) . 'k';
         }
 
-        // Get primary category
         $cat_label = '';
         $cats = get_the_category($pid);
         if(!empty($cats)) $cat_label = $cats[0]->name;
@@ -185,7 +186,7 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
     }
 }
 
-// Styles to replicate the look exactly
+// Updated Styles
 add_action('wp_head', function () {
     if ( did_action('sawah_mobile_feature_css_loaded') ) return;
     do_action('sawah_mobile_feature_css_loaded');
@@ -195,21 +196,17 @@ add_action('wp_head', function () {
     .sawah-mobile-feature { width: 100%; max-width: 100%; box-sizing: border-box; }
     .sawah-mobile-feature .l-post { display: flex; flex-direction: column; width: 100%; margin: 0; padding: 0; border: none; }
     
-    /* MEDIA: Full Width, No Radius, Ratio Control */
+    /* MEDIA */
     .sawah-mobile-feature .media { width: 100%; margin: 0; padding: 0; border-radius: 0; overflow: hidden; position: relative; }
     .sawah-mobile-feature .image-link { display: block; position: relative; width: 100%; overflow: hidden; }
     
-    /* RATIO & IMAGE */
-    /* .smf-ratio padding-bottom is handled by inline style in PHP for control */
+    /* IMAGE - NO HOVER ANIMATION */
     .sawah-mobile-feature .img.bg-cover { 
         position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
         background-position: center; background-size: cover; background-repeat: no-repeat;
-        transition: transform 0.4s ease;
     }
-    .sawah-mobile-feature .media:hover .img.bg-cover { transform: scale(1.05); }
 
     /* CONTENT BOX */
-    /* .smf-content padding is handled by inline style in PHP for control */
     .sawah-mobile-feature .smf-content { width: 100%; box-sizing: border-box; }
 
     /* META STRIP */
@@ -218,14 +215,26 @@ add_action('wp_head', function () {
         font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
         margin-bottom: 8px; color: #999;
     }
-    .sawah-mobile-feature .meta-item { display: inline-flex; align-items: center; margin-right: 12px; }
-    .sawah-mobile-feature .meta-item:last-child { margin-right: 0; }
+    
+    /* PUSH COMMENTS/VIEWS TO THE END */
+    .sawah-mobile-feature .post-cat { margin-right: auto; }
+
+    .sawah-mobile-feature .meta-item { display: inline-flex; align-items: center; margin-left: 12px; }
+    .sawah-mobile-feature .post-cat { margin-left: 0; } /* Reset for first item */
     
     /* ICONS */
     .sawah-mobile-feature .meta-item i { margin-right: 4px; font-size: 13px; position: relative; top: -1px; }
 
     /* CATEGORY */
     .sawah-mobile-feature .post-cat a { font-weight: 700; text-decoration: none; transition: color 0.2s; }
+
+    /* COMMENTS SPECIFIC COLOR #f47b23 */
+    .sawah-mobile-feature .comments, 
+    .sawah-mobile-feature .comments i, 
+    .sawah-mobile-feature .comments a { 
+        color: #f47b23 !important; 
+        text-decoration: none;
+    }
 
     /* TITLE */
     .sawah-mobile-feature .post-title { 
@@ -235,7 +244,7 @@ add_action('wp_head', function () {
         display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; 
         text-decoration: none; color: inherit; transition: color 0.2s;
     }
-    .sawah-mobile-feature .post-title a:hover { color: #d60000; /* Fallback highlight */ }
+    .sawah-mobile-feature .post-title a:hover { color: #d60000; }
 
     </style>
     <?php
