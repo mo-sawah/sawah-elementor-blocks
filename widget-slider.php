@@ -7,7 +7,7 @@ class Elementor_Sawah_Slider extends \Elementor\Widget_Base {
     public function get_title() { return 'Sawah Slider'; }
     public function get_icon() { return 'eicon-slides'; }
     
-    // CHANGED: This assigns it to your new section
+    // Assign to your new section "Sawah Blocks"
     public function get_categories() { return [ 'sawah_blocks' ]; } 
     
     public function get_script_depends() { return [ 'swiper' ]; }
@@ -24,8 +24,17 @@ class Elementor_Sawah_Slider extends \Elementor\Widget_Base {
             foreach ( $categories as $category ) $cat_options[ $category->term_id ] = $category->name;
         }
         $this->add_control('cat_ids', [ 'label' => 'Filter by Category', 'type' => \Elementor\Controls_Manager::SELECT2, 'options' => $cat_options, 'multiple' => true, 'label_block' => true ]);
+        
         $this->add_control('priority_tag', [ 'label' => 'Priority Tag (Slug)', 'type' => \Elementor\Controls_Manager::TEXT ]);
-        $this->add_control('priority_days', [ 'label' => 'Priority Freshness (Days)', 'type' => \Elementor\Controls_Manager::NUMBER, 'default' => 2 ]);
+        
+        // CHANGED: From Days to Hours
+        $this->add_control('priority_hours', [ 
+            'label' => 'Priority Freshness (Hours)', 
+            'type' => \Elementor\Controls_Manager::NUMBER, 
+            'default' => 48, // Defaulting to 48 hours (2 days)
+            'description' => 'Only posts published within this many hours will be prioritized.'
+        ]);
+        
         $this->end_controls_section();
 
         // --- SECTION: VIDEO SETTINGS ---
@@ -83,10 +92,9 @@ class Elementor_Sawah_Slider extends \Elementor\Widget_Base {
         $settings = $this->get_settings_for_display();
         
         // --- BUILD VIDEO PARAMS ---
-        $vid_params = [ 'enablejsapi=1' ]; // Critical for JS control
+        $vid_params = [ 'enablejsapi=1' ]; 
         if('yes' === $settings['video_autoplay']) $vid_params[] = 'autoplay=1';
         if('yes' === $settings['video_mute']) $vid_params[] = 'mute=1&muted=1';
-        // Loop is tricky for YT, handled inside loop logic below
         if('yes' !== $settings['video_controls']) $vid_params[] = 'controls=0';
         if('yes' === $settings['video_playsinline']) $vid_params[] = 'playsinline=1';
         if('yes' === $settings['video_modest']) { $vid_params[] = 'modestbranding=1'; $vid_params[] = 'rel=0'; }
@@ -94,16 +102,17 @@ class Elementor_Sawah_Slider extends \Elementor\Widget_Base {
         $param_str = !empty($vid_params) ? implode('&', $vid_params) : '';
 
         $limit = (int)$settings['posts_count'];
-        $priority_days = (int)$settings['priority_days'];
+        $priority_hours = (int)$settings['priority_hours']; // CHANGED
         $final_posts = [];
         $exclude_ids = [];
 
-        // PRIORITY
+        // PRIORITY LOGIC (UPDATED FOR HOURS)
         if ( ! empty( $settings['priority_tag'] ) ) {
             $priority_args = [
                 'post_type' => 'post', 'posts_per_page' => $limit, 'ignore_sticky_posts' => true,
                 'tax_query' => [[ 'taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => array_map( 'trim', explode( ',', $settings['priority_tag'] ) ) ]],
-                'date_query' => [[ 'after' => $priority_days . ' days ago', 'column' => 'post_date' ]],
+                // CHANGED: 'hours ago' instead of 'days ago'
+                'date_query' => [[ 'after' => $priority_hours . ' hours ago', 'column' => 'post_date' ]],
                 'orderby' => 'date', 'order' => 'DESC'
             ];
             $priority_posts = get_posts( $priority_args );
@@ -154,7 +163,6 @@ class Elementor_Sawah_Slider extends \Elementor\Widget_Base {
                             $video_url = get_post_meta($pid, $settings['video_meta_key'], true);
                             if ( ! empty($video_url) ) {
                                 $is_video = true;
-                                // 1. Raw MP4
                                 if(strpos($video_url, '.mp4') !== false) {
                                     $attrs = 'style="width:100%;height:100%;object-fit:cover;"';
                                     if('yes'===$settings['video_autoplay']) $attrs .= ' autoplay';
@@ -164,30 +172,21 @@ class Elementor_Sawah_Slider extends \Elementor\Widget_Base {
                                     if('yes'===$settings['video_playsinline']) $attrs .= ' playsinline';
                                     $video_html = '<video class="ptm-raw-video" src="'.esc_url($video_url).'" '.$attrs.'></video>';
                                 } else {
-                                    // 2. oEmbed (YouTube/Vimeo)
                                     $oembed = wp_oembed_get($video_url, ['width' => 800, 'height' => 450]);
                                     if($oembed) {
-                                        // Extract ID for YouTube Loop fix
                                         $yt_id = '';
                                         if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/', $video_url, $matches)) {
                                             $yt_id = $matches[1];
                                         }
-
-                                        // Inject Params
                                         if ( preg_match('/src="([^"]+)"/', $oembed, $match) ) {
                                             $src = $match[1];
                                             $sep = (strpos($src, '?') === false) ? '?' : '&';
-                                            
-                                            // Specific YouTube Loop Fix: Must include playlist=ID
                                             $extra_loop = '';
                                             if('yes' === $settings['video_loop'] && $yt_id) {
                                                 $extra_loop = '&loop=1&playlist=' . $yt_id;
                                             }
-
                                             $new_src = $src . $sep . $param_str . $extra_loop;
                                             $video_html = str_replace($src, $new_src, $oembed);
-                                            
-                                            // Add class for JS targeting
                                             $video_html = str_replace('<iframe', '<iframe class="ptm-embed-video"', $video_html);
                                         }
                                     }
@@ -299,26 +298,21 @@ class Elementor_Sawah_Slider extends \Elementor\Widget_Base {
                         on: {
                             init: function() { root.classList.add('ptm-loaded'); },
                             slideChangeTransitionStart: function() {
-                                // 1. Reset Progress Bars
                                 var bars = root.querySelectorAll('.ptm-main-progress i');
                                 bars.forEach(b => { b.style.animation = 'none'; b.offsetHeight; b.style.animation = ''; });
 
-                                // 2. VIDEO LOGIC: Stop ALL, Play ACTIVE
                                 var slides = root.querySelectorAll('.swiper-slide');
                                 slides.forEach(function(slide){
-                                    // Stop HTML5
                                     var raw = slide.querySelector('video');
                                     if(raw) raw.pause();
                                     
-                                    // Stop YouTube/Vimeo (via postMessage)
                                     var frame = slide.querySelector('iframe');
                                     if(frame) {
-                                        frame.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*'); // YT
-                                        frame.contentWindow.postMessage('{"method":"pause"}', '*'); // Vimeo
+                                        frame.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*'); 
+                                        frame.contentWindow.postMessage('{"method":"pause"}', '*'); 
                                     }
                                 });
 
-                                // Play Active
                                 var active = root.querySelector('.swiper-slide-active');
                                 if(active) {
                                     var activeRaw = active.querySelector('video');
@@ -329,10 +323,8 @@ class Elementor_Sawah_Slider extends \Elementor\Widget_Base {
 
                                     var activeFrame = active.querySelector('iframe');
                                     if(activeFrame) {
-                                        // Reset YT to 0 and Play
                                         activeFrame.contentWindow.postMessage('{"event":"command","func":"seekTo","args":[0, true]}', '*');
                                         activeFrame.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-                                        // Vimeo
                                         activeFrame.contentWindow.postMessage('{"method":"setCurrentTime", "value":0}', '*');
                                         activeFrame.contentWindow.postMessage('{"method":"play"}', '*');
                                     }
@@ -354,7 +346,6 @@ class Elementor_Sawah_Slider extends \Elementor\Widget_Base {
     }
 }
 
-// We add the CSS here only once to prevent it loading multiple times if multiple widgets are used
 add_action('wp_head', function () {
     if ( did_action('sawah_slider_css_loaded') ) return;
     do_action('sawah_slider_css_loaded');
