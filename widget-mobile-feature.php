@@ -59,7 +59,6 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
             'selectors' => [ '{{WRAPPER}} .smf-content' => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};' ],
         ]);
 
-        // UPDATED DEFAULT COLOR HERE
         $this->add_control('color_cat', [ 'label' => 'Category Color', 'type' => \Elementor\Controls_Manager::COLOR, 'default' => '#626e7a', 'selectors' => [ '{{WRAPPER}} .post-cat a' => 'color: {{VALUE}}' ] ]);
         
         $this->add_control('color_title', [ 'label' => 'Title Color', 'type' => \Elementor\Controls_Manager::COLOR, 'default' => '#111111', 'selectors' => [ '{{WRAPPER}} .post-title a' => 'color: {{VALUE}}' ] ]);
@@ -79,7 +78,7 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
         $priority_hours = (int)$settings['priority_hours'];
         $found_post = null;
 
-        // 1. Try Priority Tag Logic
+        // 1. Try Priority Tag
         if ( ! empty( $settings['priority_tag'] ) ) {
             $priority_args = [
                 'post_type' => 'post', 'posts_per_page' => 1, 'ignore_sticky_posts' => true,
@@ -88,9 +87,7 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
                 'orderby' => 'date', 'order' => 'DESC'
             ];
             $posts = get_posts( $priority_args );
-            if ( ! empty( $posts ) ) {
-                $found_post = $posts[0];
-            }
+            if ( ! empty( $posts ) ) { $found_post = $posts[0]; }
         }
 
         // 2. Fallback to Category
@@ -105,9 +102,7 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
                 'orderby' => 'date', 'order' => 'DESC'
             ];
             $posts = get_posts( $filler_args );
-            if ( ! empty( $posts ) ) {
-                $found_post = $posts[0];
-            }
+            if ( ! empty( $posts ) ) { $found_post = $posts[0]; }
         }
 
         if ( ! $found_post ) {
@@ -129,9 +124,7 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
         $com_count = get_comments_number($pid);
         $views = function_exists('pvc_get_post_views') ? pvc_get_post_views($pid) : (int)get_post_meta($pid, $settings['views_meta_key'], true);
         
-        if ($views > 1000) {
-            $views = round($views / 1000, 1) . 'k';
-        }
+        if ($views > 1000) { $views = round($views / 1000, 1) . 'k'; }
 
         $cat_label = '';
         $cats = get_the_category($pid);
@@ -143,7 +136,7 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
                 
                 <div class="media">
                     <a href="<?php echo esc_url($link); ?>" class="image-link media-ratio smf-ratio" title="<?php echo esc_attr($tit); ?>">
-                        <span class="img bg-cover" style="background-image: url('<?php echo esc_url($img_url); ?>');"></span>
+                        <img src="<?php echo esc_url($img_url); ?>" alt="<?php echo esc_attr($tit); ?>" class="smf-img" loading="lazy">
                     </a>
                 </div>
 
@@ -151,25 +144,29 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
                     <div class="post-meta post-meta-a">
                         <div class="post-meta-items meta-above">
                             
-                            <?php if('yes' === $settings['show_category'] && $cat_label): ?>
-                            <span class="meta-item has-next-icon post-cat">
-                                <a href="<?php echo esc_url(get_category_link($cats[0]->term_id)); ?>" class="category"><?php echo esc_html($cat_label); ?></a>
-                            </span>
-                            <?php endif; ?>
+                            <div class="meta-left">
+                                <?php if('yes' === $settings['show_category'] && $cat_label): ?>
+                                <span class="meta-item has-next-icon post-cat">
+                                    <a href="<?php echo esc_url(get_category_link($cats[0]->term_id)); ?>" class="category"><?php echo esc_html($cat_label); ?></a>
+                                </span>
+                                <?php endif; ?>
+                            </div>
 
-                            <?php if('yes' === $settings['show_comments']): ?> 
-                            <span class="has-next-icon meta-item comments has-icon">
-                                <a href="<?php echo esc_url($link); ?>#comments">
-                                    <i class="tsi tsi-comment-o"></i><?php echo $com_count; ?>
-                                </a>
-                            </span>
-                            <?php endif; ?>
-                            
-                            <?php if('yes' === $settings['show_views']): ?> 
-                            <span class="meta-item post-views has-icon">
-                                <i class="tsi tsi-bar-chart-2"></i><?php echo $views; ?> <span>Views</span>
-                            </span>
-                            <?php endif; ?>
+                            <div class="meta-right">
+                                <?php if('yes' === $settings['show_comments']): ?> 
+                                <span class="has-next-icon meta-item comments has-icon">
+                                    <a href="<?php echo esc_url($link); ?>#comments">
+                                        <i class="tsi tsi-comment-o"></i><?php echo $com_count; ?>
+                                    </a>
+                                </span>
+                                <?php endif; ?>
+                                
+                                <?php if('yes' === $settings['show_views']): ?> 
+                                <span class="meta-item post-views has-icon">
+                                    <i class="tsi tsi-bar-chart-2"></i><?php echo $views; ?> <span>Views</span>
+                                </span>
+                                <?php endif; ?>
+                            </div>
 
                         </div>
                         
@@ -186,49 +183,48 @@ class Elementor_Sawah_Mobile_Feature extends \Elementor\Widget_Base {
     }
 }
 
-// Updated Styles
 add_action('wp_head', function () {
     if ( did_action('sawah_mobile_feature_css_loaded') ) return;
     do_action('sawah_mobile_feature_css_loaded');
     ?>
     <style>
-    /* RESET / LAYOUT */
+    /* RESET */
     .sawah-mobile-feature { width: 100%; max-width: 100%; box-sizing: border-box; }
     .sawah-mobile-feature .l-post { display: flex; flex-direction: column; width: 100%; margin: 0; padding: 0; border: none; }
     
-    /* MEDIA */
+    /* MEDIA CONTAINER */
     .sawah-mobile-feature .media { width: 100%; margin: 0; padding: 0; border-radius: 0; overflow: hidden; position: relative; }
     .sawah-mobile-feature .image-link { display: block; position: relative; width: 100%; overflow: hidden; }
-    
-    /* IMAGE - NO HOVER ANIMATION */
-    .sawah-mobile-feature .img.bg-cover { 
+
+    /* IMAGE FIX */
+    /* .smf-ratio padding-bottom is handled by inline style in PHP for control */
+    /* We position the IMG absolute to fill that ratio box */
+    .sawah-mobile-feature .smf-img { 
         position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-        background-position: center; background-size: cover; background-repeat: no-repeat;
+        object-fit: cover; display: block;
     }
 
     /* CONTENT BOX */
     .sawah-mobile-feature .smf-content { width: 100%; box-sizing: border-box; }
 
-    /* META STRIP */
+    /* META FLEX ALIGNMENT FIX */
     .sawah-mobile-feature .post-meta-items { 
-        display: flex; align-items: center; flex-wrap: wrap; 
+        display: flex; justify-content: space-between; align-items: center; 
+        width: 100%;
         font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
         margin-bottom: 8px; color: #999;
     }
     
-    /* PUSH COMMENTS/VIEWS TO THE END */
-    .sawah-mobile-feature .post-cat { margin-right: auto; }
+    .sawah-mobile-feature .meta-right { display: flex; align-items: center; gap: 12px; }
+    .sawah-mobile-feature .meta-item { display: inline-flex; align-items: center; }
 
-    .sawah-mobile-feature .meta-item { display: inline-flex; align-items: center; margin-left: 12px; }
-    .sawah-mobile-feature .post-cat { margin-left: 0; } /* Reset for first item */
-    
     /* ICONS */
     .sawah-mobile-feature .meta-item i { margin-right: 4px; font-size: 13px; position: relative; top: -1px; }
 
     /* CATEGORY */
     .sawah-mobile-feature .post-cat a { font-weight: 700; text-decoration: none; transition: color 0.2s; }
 
-    /* COMMENTS SPECIFIC COLOR #f47b23 */
+    /* COMMENTS COLOR #f47b23 */
     .sawah-mobile-feature .comments, 
     .sawah-mobile-feature .comments i, 
     .sawah-mobile-feature .comments a { 
